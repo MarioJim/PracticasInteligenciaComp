@@ -10,13 +10,13 @@ from scipy.sparse.construct import rand
 from sklearn.metrics import mean_squared_error
 
 df = pd.DataFrame({
-    'x': list(([0,10], [1,9], [2,8], [3,7], [4,6], [5,5], [6,4], [7,3], [8,2], [9,1]), ),
+    'x': list(((0, 10), (1, 9), (2, 8), (3, 7), (4, 6), (5, 5), (6, 4), (7, 3), (8, 2), (9, 1)), ),
     'f(x)': [90, 82, 74, 66, 58, 50, 42, 34, 26, 18]
 })
 
 def eval_func(ind, inputs, target):
     func_eval = toolbox.compile(expr=ind)
-    predictions = list(map(func_eval, inputs))
+    predictions = list(map(lambda entrada: func_eval(entrada[0], entrada[1]), inputs))
     try:
         return abs(mean_squared_error(target, predictions)),
     except ValueError:
@@ -34,7 +34,7 @@ def div(a, b):
     except:
         return 1
 
-pset = gp.PrimitiveSet('MAIN', 1)
+pset = gp.PrimitiveSet('MAIN', 2)
 pset.addPrimitive(operator.add, 2)
 pset.addPrimitive(operator.mul, 2)
 pset.addPrimitive(operator.sub, 2)
@@ -42,6 +42,7 @@ pset.addPrimitive(div, 2)
 pset.addPrimitive(potencia, 2)
 
 pset.renameArguments(ARG0='x')
+pset.renameArguments(ARG1='y')
 pset.addEphemeralConstant('R', lambda: random.randint(-15,15))
 pset.addTerminal(math.e, name='e')
 
@@ -67,9 +68,9 @@ stats.register('mean', np.mean)
 stats.register('std', np.std)
 
 hof = tools.HallOfFame(5)
-pop = toolbox.population(n=20)
+pop = toolbox.population(n=50)
 
-results, log = algorithms.eaSimple(pop, toolbox, cxpb=1.0, mutpb=0.1, ngen=10, stats=stats, halloffame=hof)
+results, log = algorithms.eaSimple(pop, toolbox, cxpb=1.0, mutpb=0.1, ngen=100, stats=stats, halloffame=hof)
 
 for ind in hof:
     print(ind)
