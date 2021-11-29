@@ -44,7 +44,7 @@ def read_coords(path):
                 line = [float(x.replace("\n", "")) for x in line.split(" ")]
                 coords.append(np.array(line))
     except:
-        print("** Para ejecutar este programa se necesita estar situado en el folder que contiene el archivo coords.txt")
+        print("** No se pudo leer el archivo", path)
         print("Se usaran 50 coordenadas generadas al azar")
         return generate_random_coords(50)
     return coords
