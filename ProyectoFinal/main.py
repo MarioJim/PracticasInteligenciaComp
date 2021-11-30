@@ -1,66 +1,66 @@
-import sys
-import numpy as np
 import random
-import math
+import sys
+from typing import Tuple
 
-# Calculate distance between cities
-def distance(coords, city_0, city_1):
-    coord_0, coord_1 = coords[city_0], coords[city_1]
-    return math.sqrt((coord_0[0] - coord_1[0]) ** 2 + (coord_0[1] - coord_1[1]) ** 2)
+from deap.tools import mutShuffleIndexes, cxPartialyMatched
+import matplotlib.pyplot as plt
+import numpy as np
 
-# Calculate total distance of a given path
-def pathDistance(solution, coords):
-    n_cities = len(coords)
-    result = 0
-    for i in range(n_cities):
-        result += distance(coords, solution[i % n_cities], solution[(i + 1) % n_cities])
-    return result
+from tsp import TravelingSalesmanProblem
 
-# Generates an initial solution (traverse cities in order)
-def initialSolution(coords):
-    cities = [i for i in range(len(coords))]
-    solution = []
 
-    unvisited_cities = set(cities)
-    while unvisited_cities:
-        next_city = unvisited_cities.pop()
-        solution.append(next_city)
-        
-    cur_pathDistance = pathDistance(solution, coords)
-    return solution, cur_pathDistance
+def mutDisplacement(indiv: list) -> Tuple[list]:
+    p, sz = sorted(random.sample(range(len(indiv) // 3), 2))
+    indiv[p:p+sz], indiv[p+sz:p+sz+sz] = indiv[p+sz:p+sz+sz], indiv[p:p+sz]
+    return indiv,
 
-def generate_random_coords(num_citites):
-    coords = []
-    for i in range(num_citites):
-        line = [random.uniform(-100, 100), random.uniform(-100, 100)]
-        coords.append(np.array(line))
-    return coords
 
-def read_coords(path):
-    coords = []
-    try:
-        with open(path, "r") as f:
-            for line in f.readlines():
-                line = [float(x.replace("\n", "")) for x in line.split(" ")]
-                coords.append(np.array(line))
-    except:
-        print("** No se pudo leer el archivo", path)
-        print("Se usaran 50 coordenadas generadas al azar")
-        return generate_random_coords(50)
-    return coords
+def cxVotingRecombination(ind1: list, ind2: list) -> Tuple[list, list]:
+    not_same = set()
+    for v1, v2 in zip(ind1, ind2):
+        if v1 != v2:
+            not_same.add(v1)
+            not_same.add(v2)
 
-# Global initializations
-if len(sys.argv) < 2:
-    print("Please indicate the filename with the coords or random # to generate the # coords")
-    exit(1)
-if(sys.argv[1] == 'random'):
-    if len(sys.argv) < 3:
-        print("Please enter the # of coords to generate after random")
+    not_same1 = list(not_same)
+    random.shuffle(not_same1)
+    not_same2 = list(not_same)
+    random.shuffle(not_same2)
+
+    for i, (v1, v2) in enumerate(zip(ind1, ind2)):
+        if v1 in not_same:
+            ind1[i] = not_same1.pop()
+            ind2[i] = not_same2.pop()
+
+    return ind1, ind2
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Please enter the number of cities to generate")
         exit(1)
-    coords = np.array(generate_random_coords(int(sys.argv[2])))
-else:
-    coords = np.array(read_coords(sys.argv[1]))
 
-initialSolution, initialPathDistance = initialSolution(coords)
-print("Initial solution path: ", initialSolution)
-print("Initial path distance: ", initialPathDistance)
+    random.seed(0)
+
+    # num_cities = int(sys.argv[1])
+    # coords = np.random.uniform(-100, 100, (num_cities, 2))
+    # np.savetxt("coords.txt", coords)
+    coords = np.loadtxt("coords.txt")
+
+    algorithm = "simple"
+    # algorithm = "plus"
+    # algorithm = "comma"
+    def mutation_f(ind): return mutShuffleIndexes(ind, 0.05)
+    # def mutation_f(ind): return mutDisplacement(ind)
+    def crossover_f(ind1, ind2): return cxPartialyMatched(ind1, ind2)
+    # def crossover_f(ind1, ind2): return cxVotingRecombination(ind1, ind2)
+
+    tsp_instance = TravelingSalesmanProblem(
+        coords, algorithm, mutation_f, crossover_f)
+
+    means, stds, mins, hof = tsp_instance.execute()
+    tsp_instance.print_hall_of_fame(hof)
+    tsp_instance.plot_generations(means, stds, mins)
+    plt.savefig("generations.png")
+    tsp_instance.plot_solution(hof.items[0])
+    plt.savefig("solution.png")
